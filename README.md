@@ -10,9 +10,9 @@ run `pupdate -h` for help with arguments. with no arguments, pupdate will update
 
 ```json
 {
-	"remotes": ["username@remote"],
-	"log_dir": "/path/to/log/directory"
+  "remotes": ["username@remote"],
+  "log_dir": "/path/to/log/directory"
 }
+```
 
 if `log_dir` is missing and is not provided when the command is run, no logs from pupdating will be saved.
-```
