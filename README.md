@@ -4,6 +4,8 @@ simple helper utility to update remote systems alongside the local system easily
 
 ## usage
 
+you can install easily using `cargo install pupdate`.
+
 run `pupdate -h` for help with arguments. with no arguments, pupdate will update the local system and any remotes configured in the config file (default ~/.pupdate).
 
 ## config
