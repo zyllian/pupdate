@@ -1,7 +1,11 @@
 [package]
+description = "utility to update remote and local systems"
 edition = "2021"
+homepage = "https://github.com/zyllian/pupdate"
 license = "WTFPL"
 name = "pupdate"
+readme = "README.md"
+repository = "https://github.com/zyllian/pupdate"
 version = "0.1.0"
 
 [dependencies]
