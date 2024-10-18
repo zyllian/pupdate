@@ -77,8 +77,13 @@ async fn pupdate_remote(
 	Ok((remote, success))
 }
 
-/// pupdates the local system using apt-get
-async fn pupdate_apt(log_dir: Option<PathBuf>) -> eyre::Result<bool> {
+/// helper for pupdates which both follow the "X update && X upgrade" set of commands (e.g. apt-get and brew)
+async fn update_and_upgrade(
+	log_dir: Option<PathBuf>,
+	command: &str,
+	with_sudo: bool,
+	yes: bool,
+) -> eyre::Result<bool> {
 	async fn log(outputs: &[std::process::Output], log_dir: Option<PathBuf>) -> eyre::Result<bool> {
 		if let Some(log_dir) = log_dir {
 			let mut stdout = File::create(log_dir.join("local.stdout.log")).await?;
@@ -96,21 +101,40 @@ async fn pupdate_apt(log_dir: Option<PathBuf>) -> eyre::Result<bool> {
 		Ok(true)
 	}
 
-	let update_output = Command::new("sudo")
-		.arg("apt-get")
+	fn command_with_sudo(command: &str, with_sudo: bool) -> Command {
+		if with_sudo {
+			let mut cmd = Command::new("sudo");
+			cmd.arg(command);
+			cmd
+		} else {
+			Command::new(command)
+		}
+	}
+
+	let update_output = command_with_sudo(command, with_sudo)
 		.arg("update")
 		.output()
 		.await?;
 	if !update_output.status.success() {
 		return log(&[update_output], log_dir).await;
 	}
-	let upgrade_output = Command::new("sudo")
-		.arg("apt-get")
-		.arg("upgrade")
-		.arg("-y")
-		.output()
-		.await?;
+	let mut upgrade_command = command_with_sudo(command, with_sudo);
+	upgrade_command.arg("upgrade");
+	if yes {
+		upgrade_command.arg("-y");
+	}
+	let upgrade_output = upgrade_command.output().await?;
 	log(&[update_output, upgrade_output], log_dir).await
+}
+
+/// pupdates the local system using apt-get
+async fn pupdate_apt(log_dir: Option<PathBuf>) -> eyre::Result<bool> {
+	update_and_upgrade(log_dir, "apt-get", true, true).await
+}
+
+/// pupdates the local system using brew, untested
+async fn pupdate_homebrew(log_dir: Option<PathBuf>) -> eyre::Result<bool> {
+	update_and_upgrade(log_dir, "brew", false, false).await
 }
 
 #[tokio::main]
@@ -200,7 +224,18 @@ async fn main() -> eyre::Result<()> {
 	if !args.skip_local {
 		println!("running local pupdates, you may be pawmpted for your password");
 		let start = OffsetDateTime::now_utc();
-		if pupdate_apt(log_dir).await? {
+		let result = if cfg!(target_os = "linux") {
+			println!("pupdating with apt-get...");
+			Some(pupdate_apt(log_dir).await)
+		} else if cfg!(target_os = "macos") {
+			println!("pupdating with brew...");
+			Some(pupdate_homebrew(log_dir).await)
+		} else {
+			eprintln!("unsupported operating system for local pupdates, skipping");
+			None
+		};
+		if let Some(result) = result {
+			result?;
 			let end = OffsetDateTime::now_utc();
 			let duration = end - start;
 
