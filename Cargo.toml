@@ -6,7 +6,7 @@ license = "WTFPL"
 name = "pupdate"
 readme = "README.md"
 repository = "https://github.com/zyllian/pupdate"
-version = "0.3.0"
+version = "0.2.0"
 
 [dependencies]
 clap = {version = "4", features = ["derive"]}
